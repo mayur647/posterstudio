@@ -17,6 +17,7 @@ import {
   emojiFor,
 } from "@/lib/posterData";
 import ScreenNav from "@/components/ScreenNav";
+import ScaledPoster from "@/components/ScaledPoster";
 import CalendarSquare from "@/components/posters/CalendarSquare";
 import CalendarStory from "@/components/posters/CalendarStory";
 import EventSquare from "@/components/posters/EventSquare";
@@ -247,13 +248,15 @@ export default function PosterStudio({
         {/* Weekly calendar */}
         <Section eyebrow="Output · Weekly calendar" heading="Weekly Calendar">
           <PosterColumn label="SQUARE · 1:1">
-            <CalendarSquare
-              id="cal-square"
-              title={CAL_TITLE}
-              dateRange={range}
-              tiles={tiles}
-              logos={logos}
-            />
+            <ScaledPoster width={600} height={600}>
+              <CalendarSquare
+                id="cal-square"
+                title={CAL_TITLE}
+                dateRange={range}
+                tiles={tiles}
+                logos={logos}
+              />
+            </ScaledPoster>
             <DownloadButton
               busy={busy === "nomadgao-weekly-calendar-1x1.png"}
               onClick={() =>
@@ -265,13 +268,15 @@ export default function PosterStudio({
             />
           </PosterColumn>
           <PosterColumn label="STORY · 9:16">
-            <CalendarStory
-              id="cal-story"
-              title={CAL_TITLE}
-              dateRange={range}
-              tiles={tiles}
-              logos={logos}
-            />
+            <ScaledPoster width={480} height={853}>
+              <CalendarStory
+                id="cal-story"
+                title={CAL_TITLE}
+                dateRange={range}
+                tiles={tiles}
+                logos={logos}
+              />
+            </ScaledPoster>
             <DownloadButton
               busy={busy === "nomadgao-weekly-calendar-story.png"}
               onClick={() =>
@@ -303,7 +308,9 @@ export default function PosterStudio({
               heading={`${emoji(e.typeSlug)} ${e.name}`}
             >
               <PosterColumn label="SQUARE · 1:1">
-                <EventSquare id={`${key}-square`} {...ev} logos={logos} />
+                <ScaledPoster width={600} height={600}>
+                  <EventSquare id={`${key}-square`} {...ev} logos={logos} />
+                </ScaledPoster>
                 <DownloadButton
                   busy={busy === `nomadgao-${slug(e.name)}-1x1.png`}
                   onClick={() =>
@@ -315,7 +322,9 @@ export default function PosterStudio({
                 />
               </PosterColumn>
               <PosterColumn label="STORY · 9:16">
-                <EventStory id={`${key}-story`} {...ev} logos={logos} />
+                <ScaledPoster width={480} height={853}>
+                  <EventStory id={`${key}-story`} {...ev} logos={logos} />
+                </ScaledPoster>
                 <DownloadButton
                   busy={busy === `nomadgao-${slug(e.name)}-story.png`}
                   onClick={() =>
@@ -369,7 +378,9 @@ function Section({
           {heading}
         </h2>
       </div>
-      <div className="flex flex-wrap items-start gap-9">{children}</div>
+      <div className="flex flex-col gap-9 lg:flex-row lg:flex-wrap lg:items-start">
+        {children}
+      </div>
     </section>
   );
 }
@@ -428,7 +439,7 @@ function CaptionCard({
   onRefresh: () => void;
 }) {
   return (
-    <div className="w-[430px] rounded-[20px] border border-ng-border bg-white p-6 shadow-[0_24px_56px_-34px_rgba(60,40,20,0.4)]">
+    <div className="w-full max-w-[430px] rounded-[20px] border border-ng-border bg-white p-6 shadow-[0_24px_56px_-34px_rgba(60,40,20,0.4)] lg:w-[430px]">
       <div className="mb-3.5 flex flex-wrap items-center justify-between gap-3">
         <span className="font-mono text-[10px] tracking-[0.1em] text-ng-mono-muted">
           {label}
