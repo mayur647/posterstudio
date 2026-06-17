@@ -159,13 +159,21 @@ export default function ImageLibrary() {
         <ScreenNav active="library" />
       </div>
       <div className="mx-auto max-w-[900px] px-6 py-10 sm:px-14">
-        <div className="mb-6 flex flex-col gap-2">
-          <span className="font-mono text-[12px] uppercase tracking-[0.16em] text-ng-terracotta">
-            App screen · Event image library
-          </span>
-          <h1 className="font-display text-[32px] font-extrabold text-ng-ink">
-            Your photo repository
-          </h1>
+        <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+          <div className="flex flex-col gap-2">
+            <span className="font-mono text-[12px] uppercase tracking-[0.16em] text-ng-terracotta">
+              App screen · Event image library
+            </span>
+            <h1 className="font-display text-[32px] font-extrabold text-ng-ink">
+              Your photo repository
+            </h1>
+          </div>
+          <a
+            href="/api/export"
+            className="inline-flex items-center gap-2 rounded-[30px] bg-ng-dark-btn px-5 py-3 font-body text-[14px] font-bold text-ng-card"
+          >
+            ⤓ Download events (Excel)
+          </a>
         </div>
 
         {error && (
