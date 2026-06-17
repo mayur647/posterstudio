@@ -1,12 +1,13 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   PALETTE_NAMES,
   DEFAULT_PALETTE,
   emojiForType,
   type EventType,
 } from "@/lib/theme";
+import { dateRange, dayTime } from "@/lib/format";
 import type { EventDraft, WeekFormPayload } from "@/lib/types";
 import type { AppLibrary } from "@/lib/libraryView";
 import PosterStudio from "@/components/PosterStudio";
@@ -57,6 +58,12 @@ interface FormErrors {
   events: Record<string, EventErrors>;
 }
 
+interface RecentWeek {
+  id: string;
+  createdAt: string;
+  payload: WeekFormPayload;
+}
+
 export default function SundayForm({
   initialLibrary,
 }: {
@@ -80,6 +87,38 @@ export default function SundayForm({
     initialLibrary.eventTypes,
   );
   const nextId = useRef(1);
+  const [recent, setRecent] = useState<RecentWeek[]>([]);
+
+  // Load previously saved weeks for the "Recent weeks" list.
+  useEffect(() => {
+    fetch("/api/weeks", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : { weeks: [] }))
+      .then((d) => setRecent(d.weeks ?? []))
+      .catch(() => {});
+  }, []);
+
+  /** Reopen a saved week's posters in the studio. */
+  function openInStudio(payload: WeekFormPayload) {
+    setSubmitted(payload);
+    setGenId((g) => g + 1);
+  }
+
+  /** Load a saved week back into the form fields for editing. */
+  function loadIntoForm(payload: WeekFormPayload) {
+    setWeek(payload.week);
+    setEvents(
+      payload.events.length > 0
+        ? payload.events.map((e, i) => ({ id: `e${i}`, ...e }))
+        : [emptyEvent("e0")],
+    );
+    nextId.current = payload.events.length + 1;
+    setErrors({ events: {} });
+    if (typeof window !== "undefined")
+      window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  const emojiFor = (slug: string) =>
+    eventTypes.find((t) => t.slug === slug)?.emoji ?? "🏷️";
 
   function addEvent() {
     setEvents((prev) => [...prev, emptyEvent(`e${nextId.current++}`)]);
@@ -346,6 +385,67 @@ export default function SundayForm({
               </span>
             </div>
           </form>
+
+          {recent.length > 0 && (
+            <section className="mt-14">
+              <h2 className="mb-1 font-display text-[22px] font-bold text-ng-ink-2">
+                Recent weeks
+              </h2>
+              <p className="mb-5 font-mono text-[12px] text-ng-mono-muted">
+                Weeks you&apos;ve already added — reopen the posters or load one
+                back into the form.
+              </p>
+              <div className="flex flex-col gap-4">
+                {recent.map((r) => (
+                  <div
+                    key={r.id}
+                    className="rounded-[18px] border border-ng-border bg-ng-card p-5 shadow-[0_24px_56px_-34px_rgba(60,40,20,0.4)]"
+                  >
+                    <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                      <span className="font-mono text-[12px] uppercase tracking-[0.1em] text-ng-terracotta">
+                        {dateRange(r.payload.week.startDate, r.payload.week.endDate) || "—"}{" "}
+                        · {r.payload.week.theme} ·{" "}
+                        {r.payload.events.length} event
+                        {r.payload.events.length === 1 ? "" : "s"}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => loadIntoForm(r.payload)}
+                          className="rounded-[20px] border border-ng-border-2 bg-white px-3.5 py-2 font-body text-[12.5px] font-semibold text-ng-muted"
+                        >
+                          Load into form
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => openInStudio(r.payload)}
+                          className="rounded-[20px] bg-ng-dark-btn px-3.5 py-2 font-body text-[12.5px] font-bold text-ng-card"
+                        >
+                          Open posters →
+                        </button>
+                      </div>
+                    </div>
+                    <ul className="flex flex-col gap-1.5">
+                      {r.payload.events.map((e, i) => (
+                        <li
+                          key={i}
+                          className="flex items-baseline gap-2 text-[14px] text-ng-ink-3"
+                        >
+                          <span className="text-[15px] leading-none">
+                            {emojiFor(e.typeSlug)}
+                          </span>
+                          <span className="font-body font-semibold">{e.name}</span>
+                          <span className="font-mono text-[11.5px] text-ng-mono-muted">
+                            {[dayTime(e.date, e.time), e.price].filter(Boolean).join(" · ")}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
       </div>
       </div>
     </div>

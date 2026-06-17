@@ -1,9 +1,22 @@
 import { NextResponse } from "next/server";
 import { isSupabaseConfigured } from "@/lib/db/supabase";
-import { saveWeek } from "@/lib/db/weeks";
+import { saveWeek, listWeeks } from "@/lib/db/weeks";
 import type { WeekFormPayload } from "@/lib/types";
 
 export const runtime = "nodejs";
+
+export async function GET() {
+  if (!isSupabaseConfigured()) {
+    return NextResponse.json({ weeks: [] });
+  }
+  try {
+    const weeks = await listWeeks();
+    return NextResponse.json({ weeks }, { headers: { "Cache-Control": "no-store" } });
+  } catch (err) {
+    console.error("list weeks failed", err);
+    return NextResponse.json({ error: "list failed" }, { status: 500 });
+  }
+}
 
 export async function POST(req: Request) {
   if (!isSupabaseConfigured()) {

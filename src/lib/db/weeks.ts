@@ -1,5 +1,6 @@
 import { getSupabaseAdmin } from "./supabase";
 import { listEventTypes } from "./library";
+import { DEFAULT_PALETTE } from "@/lib/theme";
 import type { WeekFormPayload } from "@/lib/types";
 
 /**
@@ -41,4 +42,58 @@ export async function saveWeek(payload: WeekFormPayload): Promise<string> {
   }
 
   return weekId;
+}
+
+export interface SavedWeek {
+  id: string;
+  createdAt: string;
+  payload: WeekFormPayload;
+}
+
+/** Lists recently saved weeks (most recent first) with their events. */
+export async function listWeeks(limit = 12): Promise<SavedWeek[]> {
+  const db = getSupabaseAdmin();
+  const { data: weeks, error } = await db
+    .from("week")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) throw new Error(error.message);
+  if (!weeks || weeks.length === 0) return [];
+
+  const ids = weeks.map((w) => w.id);
+  const { data: events } = await db.from("event").select("*").in("week_id", ids);
+  const types = await listEventTypes();
+  const slugById = new Map(types.map((t) => [t.id, t.slug]));
+
+  const byWeek = new Map<string, typeof events>();
+  for (const e of events ?? []) {
+    const list = byWeek.get(e.week_id) ?? [];
+    list.push(e);
+    byWeek.set(e.week_id, list);
+  }
+
+  return weeks.map((w) => ({
+    id: w.id,
+    createdAt: w.created_at,
+    payload: {
+      week: {
+        startDate: w.start_date ?? "",
+        endDate: w.end_date ?? "",
+        theme: w.theme ?? DEFAULT_PALETTE,
+      },
+      events: (byWeek.get(w.id) ?? [])
+        .slice()
+        .sort((a, b) => (a.date ?? "").localeCompare(b.date ?? ""))
+        .map((e) => ({
+          name: e.name ?? "",
+          typeSlug: e.event_type_id ? slugById.get(e.event_type_id) ?? "" : "",
+          date: e.date ?? "",
+          time: e.time ?? "",
+          location: e.location ?? "",
+          price: e.price ?? "",
+          description: e.description ?? "",
+        })),
+    },
+  }));
 }
