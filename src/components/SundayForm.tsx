@@ -11,6 +11,7 @@ import type { EventDraft, WeekFormPayload } from "@/lib/types";
 import type { AppLibrary } from "@/lib/libraryView";
 import PosterStudio from "@/components/PosterStudio";
 import ScreenNav from "@/components/ScreenNav";
+import BrandMark from "@/components/BrandMark";
 
 const DEFAULT_LOCATION = "NomadGao Rooftop, Dharamkot";
 
@@ -223,11 +224,9 @@ export default function SundayForm({
         {/* Header */}
         <header className="mb-10">
           <div className="mb-4 flex items-center gap-3">
-            <div className="flex h-[34px] w-[34px] items-center justify-center rounded-[9px] bg-[#e89f7e] font-display text-[18px] font-extrabold text-ng-card">
-              N
-            </div>
+            <BrandMark logos={initialLibrary.logos} />
             <span className="font-mono text-[12px] uppercase tracking-[0.2em] text-ng-mono-muted">
-              NomadGao × Hotpot House · Dharamkot pilot
+              Dharamkot pilot
             </span>
           </div>
           <h1 className="mb-3 max-w-[640px] font-display text-[44px] font-extrabold leading-[1.02] text-ng-ink">

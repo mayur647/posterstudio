@@ -18,6 +18,7 @@ import {
 } from "@/lib/posterData";
 import ScreenNav from "@/components/ScreenNav";
 import ScaledPoster from "@/components/ScaledPoster";
+import BrandMark from "@/components/BrandMark";
 import CalendarSquare from "@/components/posters/CalendarSquare";
 import CalendarStory from "@/components/posters/CalendarStory";
 import EventSquare from "@/components/posters/EventSquare";
@@ -212,11 +213,9 @@ export default function PosterStudio({
         {/* Top bar */}
         <header className="mb-9">
           <div className="mb-4 flex items-center gap-3">
-            <div className="flex h-[34px] w-[34px] items-center justify-center rounded-[9px] bg-[#e89f7e] font-display text-[18px] font-extrabold text-ng-card">
-              N
-            </div>
+            <BrandMark logos={logos} />
             <span className="font-mono text-[12px] uppercase tracking-[0.2em] text-ng-mono-muted">
-              NomadGao × Hotpot House · Dharamkot pilot
+              Dharamkot pilot
             </span>
           </div>
           <div className="flex flex-wrap items-end justify-between gap-4">
