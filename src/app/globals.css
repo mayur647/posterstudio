@@ -1,0 +1,62 @@
+@import "tailwindcss";
+
+/*
+ * NomadGao × The Hotpot House — design tokens (from the handoff README).
+ * Neutrals / chrome, accents, and the brand type scale. The 7 shuffle
+ * palettes live in src/lib/theme.ts and are applied as CSS vars at render.
+ */
+:root {
+  /* surfaces */
+  --ng-page: #e7e2d8;
+  --ng-card: #fbf4ea;
+  --ng-card-pure: #ffffff;
+
+  /* ink */
+  --ng-ink: #2b2520;
+  --ng-ink-2: #3a322b;
+  --ng-ink-3: #4a3f36;
+
+  /* muted text */
+  --ng-muted: #5f5648;
+  --ng-muted-2: #6b6051;
+  --ng-muted-3: #7a6e60;
+  --ng-mono-muted: #a3917a;
+  --ng-mono-muted-2: #8a7a5e;
+
+  /* borders */
+  --ng-border: #ece1cf;
+  --ng-border-2: #e2d2bd;
+  --ng-border-3: #f0e6d6;
+  --ng-rule: #cfc8b9;
+
+  /* accents */
+  --ng-terracotta: #c87a52;
+  --ng-terracotta-strong: #bf5421;
+  --ng-dark-btn: #2b2520;
+}
+
+@theme inline {
+  --color-ng-page: var(--ng-page);
+  --color-ng-card: var(--ng-card);
+  --color-ng-ink: var(--ng-ink);
+  --color-ng-ink-2: var(--ng-ink-2);
+  --color-ng-ink-3: var(--ng-ink-3);
+  --color-ng-muted: var(--ng-muted);
+  --color-ng-muted-2: var(--ng-muted-2);
+  --color-ng-muted-3: var(--ng-muted-3);
+  --color-ng-mono-muted: var(--ng-mono-muted);
+  --color-ng-border: var(--ng-border);
+  --color-ng-border-2: var(--ng-border-2);
+  --color-ng-terracotta: var(--ng-terracotta);
+  --color-ng-dark-btn: var(--ng-dark-btn);
+
+  --font-display: "Bricolage Grotesque", sans-serif;
+  --font-body: "Hanken Grotesk", sans-serif;
+  --font-mono: "Space Mono", monospace;
+}
+
+body {
+  background: var(--ng-page);
+  color: var(--ng-ink);
+  font-family: var(--font-body);
+}
