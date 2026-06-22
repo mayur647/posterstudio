@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import type { EventType } from "@/lib/theme";
 import type { WeekFormPayload } from "@/lib/types";
 import {
@@ -9,15 +9,6 @@ import {
   styleVars,
   type PosterStyle,
 } from "@/lib/style";
-
-// Per-tab key for the current studio look, so the shuffled palette/fonts/motif
-// survive tab switches and reloads alongside the open week.
-const STUDIO_STYLE_KEY = "ng:studio-style";
-import {
-  calendarCaption,
-  eventCaption,
-  type CaptionEvent,
-} from "@/lib/captions";
 import { buildClaudePrompt } from "@/lib/captionPrompt";
 import {
   CAL_TITLE,
@@ -34,6 +25,10 @@ import CalendarStory from "@/components/posters/CalendarStory";
 import EventSquare from "@/components/posters/EventSquare";
 import EventStory from "@/components/posters/EventStory";
 
+// Per-tab key for the current studio look, so the shuffled palette/fonts/motif
+// survive tab switches and reloads alongside the open week.
+const STUDIO_STYLE_KEY = "ng:studio-style";
+
 export default function PosterStudio({
   payload,
   eventTypes,
@@ -49,16 +44,6 @@ export default function PosterStudio({
 }) {
   const [style, setStyle] = useState(defaultStyle());
   const [seed, setSeed] = useState(0);
-  const [capIdx, setCapIdx] = useState<Record<string, number>>({});
-  // AI-generated caption variants appended per subject (beyond the templates).
-  const [extra, setExtra] = useState<Record<string, string[]>>({});
-  const [capBusy, setCapBusy] = useState<string | null>(null);
-  // Per-subject provenance of the last caption fetch (openai vs template + why),
-  // so the CM can see whether a live AI caption was actually produced.
-  const [capMeta, setCapMeta] = useState<
-    Record<string, { source?: string; reason?: string; sources?: string[] }>
-  >({});
-  const [copiedId, setCopiedId] = useState<string | null>(null);
   const [promptCopiedId, setPromptCopiedId] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [styleReady, setStyleReady] = useState(false);
@@ -96,125 +81,18 @@ export default function PosterStudio({
   const emoji = (slug: string) => emojiFor(eventTypes, slug);
   const tiles = buildCalendarTiles(payload, eventTypes);
   const range = calendarRange(payload);
-
-  // Caption variant sets, rebuilt only when the week data changes.
-  const calVariants = useMemo(() => {
-    const evs: CaptionEvent[] = payload.events.map((e) => ({
-      emoji: emoji(e.typeSlug),
-      name: e.name,
-      date: e.date,
-      time: e.time,
-      price: e.price,
-      location: e.location,
-      description: e.description,
-    }));
-    return calendarCaption(evs);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [payload]);
-
-  const eventVariants = useMemo(
-    () =>
-      payload.events.map((e) =>
-        eventCaption({
-          emoji: emoji(e.typeSlug),
-          name: e.name,
-          date: e.date,
-          time: e.time,
-          price: e.price,
-          location: e.location,
-          description: e.description,
-        }),
-      ),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [payload],
-  );
-
-  // Instant caption shown before any regeneration; Refresh calls Claude.
-  const calBase = [calVariants[0]];
+  const calPrompt = buildClaudePrompt("calendar", payload, eventTypes);
 
   function shuffle() {
     setStyle(shuffleStyle());
     setSeed((s) => s + 1);
   }
 
-  /** Template variants for the subject plus any AI-generated ones. */
-  function combined(key: string, base: string[]): string[] {
-    return [...base, ...(extra[key] ?? [])];
-  }
-
-  function captionText(key: string, base: string[]): string {
-    const list = combined(key, base);
-    return list[(capIdx[key] ?? 0) % list.length];
-  }
-
-  /**
-   * Refresh cycles loaded variants; once they're exhausted it regenerates a
-   * fresh batch via Claude (/api/caption), falling back to cycling on error.
-   */
-  async function refresh(
-    key: string,
-    base: string[],
-    spec: { kind: "calendar" | "event"; eventIndex?: number },
-  ) {
-    const list = combined(key, base);
-    const cur = capIdx[key] ?? 0;
-    if (cur + 1 < list.length) {
-      setCapIdx((m) => ({ ...m, [key]: cur + 1 }));
-      return;
-    }
-    if (capBusy) return;
-    setCapBusy(key);
-    try {
-      const res = await fetch("/api/caption", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...spec, payload, eventTypes, count: 3 }),
-      });
-      if (!res.ok) throw new Error("caption request failed");
-      const data = await res.json();
-      setCapMeta((m) => ({
-        ...m,
-        [key]: { source: data?.source, reason: data?.reason, sources: data?.sources },
-      }));
-      const fresh: unknown = data?.variants;
-      if (Array.isArray(fresh) && fresh.every((v) => typeof v === "string") && fresh.length > 0) {
-        // Advance to the first fetched variant that differs from what's shown
-        // (the template fallback repeats variant 0, which is the instant one).
-        const currentText = list[cur % list.length];
-        const merged = [...list, ...(fresh as string[])];
-        let target = list.length;
-        while (target < merged.length && merged[target] === currentText) target++;
-        if (target >= merged.length) target = list.length;
-        setExtra((m) => ({ ...m, [key]: [...(m[key] ?? []), ...(fresh as string[])] }));
-        setCapIdx((m) => ({ ...m, [key]: target }));
-      } else {
-        setCapIdx((m) => ({ ...m, [key]: cur + 1 }));
-      }
-    } catch (err) {
-      console.error(err);
-      setCapIdx((m) => ({ ...m, [key]: cur + 1 })); // cycle templates on error
-    } finally {
-      setCapBusy(null);
-    }
-  }
-
-  /** Copy a ready-made claude.ai prompt and open the chat in a new tab. Free —
-   *  the CM runs it on their own Claude subscription, no API cost. */
+  /** Copy a caption-generation prompt to the clipboard. */
   function copyPrompt(key: string, text: string) {
-    try {
-      navigator.clipboard?.writeText(text).catch(() => fallbackCopy(text));
-    } catch {
-      fallbackCopy(text);
-    }
-    window.open("https://claude.ai/new", "_blank", "noopener,noreferrer");
-    setPromptCopiedId(key);
-    window.setTimeout(() => setPromptCopiedId(null), 2500);
-  }
-
-  function copy(key: string, text: string) {
     const flag = () => {
-      setCopiedId(key);
-      window.setTimeout(() => setCopiedId(null), 1800);
+      setPromptCopiedId(key);
+      window.setTimeout(() => setPromptCopiedId(null), 1800);
     };
     if (navigator.clipboard?.writeText) {
       navigator.clipboard.writeText(text).then(flag).catch(() => {
@@ -348,18 +226,11 @@ export default function PosterStudio({
               }
             />
           </PosterColumn>
-          <CaptionCard
-            label="WEEKLY LINEUP CAPTION"
-            text={captionText("calendar", calBase)}
-            copied={copiedId === "calendar"}
-            loading={capBusy === "calendar"}
-            onCopy={() => copy("calendar", captionText("calendar", calBase))}
-            onRefresh={() => refresh("calendar", calBase, { kind: "calendar" })}
-            meta={capMeta["calendar"]}
-            promptCopied={promptCopiedId === "calendar"}
-            onCopyPrompt={() =>
-              copyPrompt("calendar", buildClaudePrompt("calendar", payload, eventTypes))
-            }
+          <PromptCard
+            label="WEEKLY LINEUP · CAPTION PROMPT"
+            prompt={calPrompt}
+            copied={promptCopiedId === "calendar"}
+            onCopy={() => copyPrompt("calendar", calPrompt)}
           />
         </Section>
 
@@ -367,6 +238,7 @@ export default function PosterStudio({
         {payload.events.map((e, i) => {
           const key = `event-${i}`;
           const ev = buildEventProps(e, seed, photos);
+          const evPrompt = buildClaudePrompt("event", payload, eventTypes, i);
           return (
             <Section
               key={key}
@@ -401,23 +273,11 @@ export default function PosterStudio({
                   }
                 />
               </PosterColumn>
-              <CaptionCard
-                label="EVENT CAPTION"
-                text={captionText(key, [eventVariants[i][0]])}
-                copied={copiedId === key}
-                loading={capBusy === key}
-                onCopy={() => copy(key, captionText(key, [eventVariants[i][0]]))}
-                onRefresh={() =>
-                  refresh(key, [eventVariants[i][0]], {
-                    kind: "event",
-                    eventIndex: i,
-                  })
-                }
-                meta={capMeta[key]}
-                promptCopied={promptCopiedId === key}
-                onCopyPrompt={() =>
-                  copyPrompt(key, buildClaudePrompt("event", payload, eventTypes, i))
-                }
+              <PromptCard
+                label="EVENT · CAPTION PROMPT"
+                prompt={evPrompt}
+                copied={promptCopiedId === key}
+                onCopy={() => copyPrompt(key, evPrompt)}
               />
             </Section>
           );
@@ -494,82 +354,39 @@ function DownloadButton({
   );
 }
 
-function CaptionCard({
+/** The week's/event's caption-generation prompt, copy-ready for any AI chat. */
+function PromptCard({
   label,
-  text,
+  prompt,
   copied,
-  loading,
   onCopy,
-  onRefresh,
-  meta,
-  promptCopied,
-  onCopyPrompt,
 }: {
   label: string;
-  text: string;
+  prompt: string;
   copied: boolean;
-  loading?: boolean;
   onCopy: () => void;
-  onRefresh: () => void;
-  meta?: { source?: string; reason?: string; sources?: string[] };
-  promptCopied?: boolean;
-  onCopyPrompt?: () => void;
 }) {
   return (
     <div className="w-full max-w-[430px] rounded-[20px] border border-ng-border bg-white p-6 shadow-[0_24px_56px_-34px_rgba(60,40,20,0.4)] lg:w-[430px]">
-      <div className="mb-3.5 flex flex-wrap items-center justify-between gap-3">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <span className="font-mono text-[10px] tracking-[0.1em] text-ng-mono-muted">
           {label}
         </span>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={onRefresh}
-            disabled={loading}
-            className="inline-flex items-center gap-1.5 rounded-[30px] border border-ng-border-2 bg-white px-4 py-2.5 font-body text-[13.5px] font-bold text-ng-muted disabled:opacity-50"
-          >
-            {loading ? "✨ Writing…" : "🔄 Refresh"}
-          </button>
-          <button
-            type="button"
-            onClick={onCopy}
-            className="inline-flex items-center gap-2 rounded-[30px] bg-ng-dark-btn px-[18px] py-2.5 font-body text-[13.5px] font-bold text-ng-card"
-          >
-            📋 {copied ? "Copied ✓" : "Copy caption"}
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={onCopy}
+          className="inline-flex items-center gap-2 rounded-[30px] bg-ng-dark-btn px-[18px] py-2.5 font-body text-[13.5px] font-bold text-ng-card"
+        >
+          📋 {copied ? "Copied ✓" : "Copy prompt"}
+        </button>
       </div>
-      {meta?.source && (
-        <div className="mb-2.5 font-mono text-[10px] leading-[1.5] tracking-[0.04em] text-ng-mono-muted">
-          {meta.source === "claude" || meta.source === "openai"
-            ? `✨ Researched & written by ${meta.source === "claude" ? "Claude" : "OpenAI"}${
-                meta.sources?.length
-                  ? ` · ${meta.sources.length} source${meta.sources.length === 1 ? "" : "s"}`
-                  : ""
-              }`
-            : `📝 Built-in template${meta.reason ? ` — AI off: ${meta.reason}` : ""}`}
-        </div>
-      )}
-      <div className="whitespace-pre-line rounded-[14px] border border-[#f0e3d0] bg-ng-card px-5 py-[18px] font-body text-[14px] leading-[1.6] text-ng-ink-3">
-        {text}
-      </div>
-      {onCopyPrompt && (
-        <div className="mt-3.5 border-t border-[#f0e3d0] pt-3.5">
-          <button
-            type="button"
-            onClick={onCopyPrompt}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-[30px] border border-ng-border-2 bg-white px-4 py-2.5 font-body text-[13px] font-bold text-ng-muted"
-          >
-            {promptCopied
-              ? "✓ Prompt copied — paste it into claude.ai"
-              : "✦ Write with claude.ai (free)"}
-          </button>
-          <p className="mt-1.5 text-center font-mono text-[10px] leading-[1.5] text-ng-mono-muted">
-            Copies a research-ready prompt &amp; opens claude.ai — runs on your
-            Claude plan, no API cost. Paste the result back.
-          </p>
-        </div>
-      )}
+      <p className="mb-3 font-body text-[13px] leading-[1.5] text-ng-muted-2">
+        Paste this into your AI chat (Claude, ChatGPT…) to write the caption — it
+        researches the brands and returns ready-to-post options.
+      </p>
+      <pre className="max-h-[280px] overflow-auto whitespace-pre-wrap rounded-[14px] border border-[#f0e3d0] bg-ng-card px-4 py-3.5 font-mono text-[11.5px] leading-[1.55] text-ng-ink-3">
+        {prompt}
+      </pre>
     </div>
   );
 }

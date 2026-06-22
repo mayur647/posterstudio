@@ -11,6 +11,7 @@ const payload = {
 
 const browser = await puppeteer.launch({ headless: "new", args: ["--no-sandbox"] });
 const page = await browser.newPage();
+await page.setViewport({ width: 1440, height: 1200, deviceScaleFactor: 1 });
 await page.goto("http://localhost:3000/", { waitUntil: "networkidle0" });
 await page.evaluate((p) => sessionStorage.setItem("ng:open-week", JSON.stringify(p)), payload);
 await page.reload({ waitUntil: "networkidle0" });
@@ -23,9 +24,9 @@ await page.evaluate(() => {
   window.open = () => null;
 });
 
-// Click the first "Write with claude.ai" button (the calendar card).
+// Click the first "Copy prompt" button (the calendar caption-prompt card).
 const clicked = await page.evaluate(() => {
-  const btn = [...document.querySelectorAll("button")].find((b) => b.textContent.includes("Write with claude.ai"));
+  const btn = [...document.querySelectorAll("button")].find((b) => b.textContent.includes("Copy prompt"));
   if (!btn) return false;
   btn.click();
   return true;
@@ -33,6 +34,8 @@ const clicked = await page.evaluate(() => {
 
 await new Promise((r) => setTimeout(r, 300));
 const copied = await page.evaluate(() => window.__copied || []);
+await import("node:fs/promises").then((fs) => fs.mkdir(".render-test", { recursive: true }));
+await page.screenshot({ path: ".render-test/studio-tight.png" });
 await browser.close();
 
 const text = copied[0] || "";
