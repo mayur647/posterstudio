@@ -40,8 +40,8 @@ documents the variables.)
    |---|---|
    | `SUPABASE_URL` | `https://atrhuofopirqrqklyqkx.supabase.co` |
    | `SUPABASE_SERVICE_ROLE_KEY` | your `service_role` secret (server-only) |
-   | `ANTHROPIC_API_KEY` | your Anthropic key (optional — templates if absent) |
-   | `ANTHROPIC_MODEL` | optional; default `claude-opus-4-8` (`claude-haiku-4-5` for cheaper/faster) |
+   | `ANTHROPIC_API_KEY` | your Anthropic **API** key (optional — templates if absent). Billed to your console.anthropic.com account, **not** your Max plan. |
+   | `ANTHROPIC_MODEL` | optional; default `claude-haiku-4-5` (`claude-opus-4-8` for higher quality) |
 
    Set them for **Production** (and Preview if you want preview deploys to work).
 4. **Deploy.**
@@ -76,8 +76,8 @@ documents the variables.)
 5. **Refresh** a caption — with `ANTHROPIC_API_KEY` set, Claude runs a live web
    search on NomadGao + The Hotpot House and writes the caption from it
    (takes ~10–30s; otherwise on-brand templates). Note `/api/caption` sets
-   `maxDuration = 60` — on Hobby, `claude-opus-4-8` can approach that cap; set
-   `ANTHROPIC_MODEL=claude-haiku-4-5` if refreshes time out or feel slow.
+   `maxDuration = 60` — the default `claude-haiku-4-5` stays well under it; if
+   you switch to `claude-opus-4-8` for quality, watch for timeouts on Hobby.
 
 ---
 

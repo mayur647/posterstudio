@@ -25,10 +25,11 @@ interface CaptionRequest {
   count?: number;
 }
 
-// Any Claude 4 model supports the hosted web_search tool. Default to the most
-// capable; override with ANTHROPIC_MODEL (e.g. claude-haiku-4-5 for faster,
-// cheaper captions, or claude-sonnet-4-6 for a middle ground).
-const MODEL = process.env.ANTHROPIC_MODEL || "claude-opus-4-8";
+// Any Claude 4 model supports the hosted web_search tool. Default to Haiku —
+// fast + cheap for a per-refresh live-search workload, and safely under the 60s
+// Vercel cap. Override with ANTHROPIC_MODEL (claude-sonnet-4-6 for a middle
+// ground, claude-opus-4-8 for the highest quality).
+const MODEL = process.env.ANTHROPIC_MODEL || "claude-haiku-4-5";
 
 const SYSTEM = `You are a senior social-media copywriter for NomadGao × The Hotpot House in Dharamkot, Himachal Pradesh, India.
 
