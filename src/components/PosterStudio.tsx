@@ -18,6 +18,7 @@ import {
   eventCaption,
   type CaptionEvent,
 } from "@/lib/captions";
+import { buildClaudePrompt } from "@/lib/captionPrompt";
 import {
   CAL_TITLE,
   buildCalendarTiles,
@@ -58,6 +59,7 @@ export default function PosterStudio({
     Record<string, { source?: string; reason?: string; sources?: string[] }>
   >({});
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [promptCopiedId, setPromptCopiedId] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [styleReady, setStyleReady] = useState(false);
   // Note: per-week state resets via a `key` on this component in SundayForm,
@@ -194,6 +196,19 @@ export default function PosterStudio({
     } finally {
       setCapBusy(null);
     }
+  }
+
+  /** Copy a ready-made claude.ai prompt and open the chat in a new tab. Free —
+   *  the CM runs it on their own Claude subscription, no API cost. */
+  function copyPrompt(key: string, text: string) {
+    try {
+      navigator.clipboard?.writeText(text).catch(() => fallbackCopy(text));
+    } catch {
+      fallbackCopy(text);
+    }
+    window.open("https://claude.ai/new", "_blank", "noopener,noreferrer");
+    setPromptCopiedId(key);
+    window.setTimeout(() => setPromptCopiedId(null), 2500);
   }
 
   function copy(key: string, text: string) {
@@ -341,6 +356,10 @@ export default function PosterStudio({
             onCopy={() => copy("calendar", captionText("calendar", calBase))}
             onRefresh={() => refresh("calendar", calBase, { kind: "calendar" })}
             meta={capMeta["calendar"]}
+            promptCopied={promptCopiedId === "calendar"}
+            onCopyPrompt={() =>
+              copyPrompt("calendar", buildClaudePrompt("calendar", payload, eventTypes))
+            }
           />
         </Section>
 
@@ -395,6 +414,10 @@ export default function PosterStudio({
                   })
                 }
                 meta={capMeta[key]}
+                promptCopied={promptCopiedId === key}
+                onCopyPrompt={() =>
+                  copyPrompt(key, buildClaudePrompt("event", payload, eventTypes, i))
+                }
               />
             </Section>
           );
@@ -479,6 +502,8 @@ function CaptionCard({
   onCopy,
   onRefresh,
   meta,
+  promptCopied,
+  onCopyPrompt,
 }: {
   label: string;
   text: string;
@@ -487,6 +512,8 @@ function CaptionCard({
   onCopy: () => void;
   onRefresh: () => void;
   meta?: { source?: string; reason?: string; sources?: string[] };
+  promptCopied?: boolean;
+  onCopyPrompt?: () => void;
 }) {
   return (
     <div className="w-full max-w-[430px] rounded-[20px] border border-ng-border bg-white p-6 shadow-[0_24px_56px_-34px_rgba(60,40,20,0.4)] lg:w-[430px]">
@@ -526,6 +553,23 @@ function CaptionCard({
       <div className="whitespace-pre-line rounded-[14px] border border-[#f0e3d0] bg-ng-card px-5 py-[18px] font-body text-[14px] leading-[1.6] text-ng-ink-3">
         {text}
       </div>
+      {onCopyPrompt && (
+        <div className="mt-3.5 border-t border-[#f0e3d0] pt-3.5">
+          <button
+            type="button"
+            onClick={onCopyPrompt}
+            className="inline-flex w-full items-center justify-center gap-2 rounded-[30px] border border-ng-border-2 bg-white px-4 py-2.5 font-body text-[13px] font-bold text-ng-muted"
+          >
+            {promptCopied
+              ? "✓ Prompt copied — paste it into claude.ai"
+              : "✦ Write with claude.ai (free)"}
+          </button>
+          <p className="mt-1.5 text-center font-mono text-[10px] leading-[1.5] text-ng-mono-muted">
+            Copies a research-ready prompt &amp; opens claude.ai — runs on your
+            Claude plan, no API cost. Paste the result back.
+          </p>
+        </div>
+      )}
     </div>
   );
 }
