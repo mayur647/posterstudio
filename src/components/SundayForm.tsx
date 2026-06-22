@@ -19,6 +19,12 @@ const DEFAULT_LOCATION = "NomadGao Rooftop, Dharamkot";
 // Sentinel value for the "add a new type" option in the type dropdown.
 const ADD_TYPE = "__add__";
 
+// Per-tab key for the week currently open in the studio, so switching to the
+// Image Library tab (a separate route) and back doesn't lose the generated
+// posters. Survives client navigation and full reloads; cleared when the tab
+// closes or the user goes back to editing.
+const OPEN_WEEK_KEY = "ng:open-week";
+
 function slugify(raw: string): string {
   return raw
     .toLowerCase()
@@ -88,6 +94,35 @@ export default function SundayForm({
   );
   const nextId = useRef(1);
   const [recent, setRecent] = useState<RecentWeek[]>([]);
+  // Gates the first paint until we've checked sessionStorage for an open week,
+  // so we never flash the empty form before restoring the studio.
+  const [bootstrapped, setBootstrapped] = useState(false);
+
+  // Restore the week currently open in the studio (set when generating or
+  // reopening), so navigating to the Image Library tab and back keeps the
+  // generated posters on screen.
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(OPEN_WEEK_KEY);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      if (raw) setSubmitted(JSON.parse(raw) as WeekFormPayload);
+    } catch {
+      /* ignore malformed / unavailable storage */
+    }
+    setBootstrapped(true);
+  }, []);
+
+  // Persist (or clear) the open week whenever it changes.
+  useEffect(() => {
+    if (!bootstrapped) return;
+    try {
+      if (submitted)
+        sessionStorage.setItem(OPEN_WEEK_KEY, JSON.stringify(submitted));
+      else sessionStorage.removeItem(OPEN_WEEK_KEY);
+    } catch {
+      /* storage may be unavailable */
+    }
+  }, [submitted, bootstrapped]);
 
   // Load previously saved weeks for the "Recent weeks" list.
   useEffect(() => {
@@ -238,6 +273,20 @@ export default function SundayForm({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     }).catch(() => {});
+  }
+
+  // Hold the first paint until the open-week check has run (one frame).
+  if (!bootstrapped) {
+    return (
+      <div className="min-h-screen">
+        <div className="pt-10">
+          <ScreenNav active="studio" />
+        </div>
+        <div className="px-6 py-24 text-center font-mono text-[13px] text-ng-mono-muted">
+          Loading…
+        </div>
+      </div>
+    );
   }
 
   if (submitted) {

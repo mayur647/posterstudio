@@ -1,9 +1,18 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { EventType } from "@/lib/theme";
 import type { WeekFormPayload } from "@/lib/types";
-import { defaultStyle, shuffleStyle, styleVars } from "@/lib/style";
+import {
+  defaultStyle,
+  shuffleStyle,
+  styleVars,
+  type PosterStyle,
+} from "@/lib/style";
+
+// Per-tab key for the current studio look, so the shuffled palette/fonts/motif
+// survive tab switches and reloads alongside the open week.
+const STUDIO_STYLE_KEY = "ng:studio-style";
 import {
   calendarCaption,
   eventCaption,
@@ -45,8 +54,37 @@ export default function PosterStudio({
   const [capBusy, setCapBusy] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [styleReady, setStyleReady] = useState(false);
   // Note: per-week state resets via a `key` on this component in SundayForm,
   // which remounts it when a new week is generated.
+
+  // Restore the last shuffled look so it survives navigation / reload. Guarded
+  // against older saved shapes that predate the accent/motif fields.
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(STUDIO_STYLE_KEY);
+      if (raw) {
+        const saved = JSON.parse(raw) as { style?: PosterStyle; seed?: number };
+        const s = saved.style;
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        if (s && s.palette && s.fonts && s.accent && s.motif) setStyle(s);
+        if (typeof saved.seed === "number") setSeed(saved.seed);
+      }
+    } catch {
+      /* ignore malformed / unavailable storage */
+    }
+    setStyleReady(true);
+  }, []);
+
+  // Persist the look on every change once restore has run.
+  useEffect(() => {
+    if (!styleReady) return;
+    try {
+      sessionStorage.setItem(STUDIO_STYLE_KEY, JSON.stringify({ style, seed }));
+    } catch {
+      /* storage may be unavailable */
+    }
+  }, [style, seed, styleReady]);
 
   const emoji = (slug: string) => emojiFor(eventTypes, slug);
   const tiles = buildCalendarTiles(payload, eventTypes);
