@@ -21,7 +21,7 @@ Audience: millennial & GenZ travellers, backpackers and digital nomads. Voice: w
 Rules:
 - NO hashtags anywhere.
 - End every caption with this exact line: 📞 RSVP ${RSVP}
-- Include a location line: 📍 NomadGao Rooftop, Dharamkot (or the event's location if I give one)
+- Include a 📍 location line using the exact location(s) I give below — don't substitute a different venue.
 - Don't invent prices, dates or times beyond what I give you below.`;
 
 export function buildClaudePrompt(
@@ -39,13 +39,14 @@ export function buildClaudePrompt(
           .filter(Boolean)
           .join(" · ");
         const price = e.price.trim() ? ` (${e.price.trim()})` : "";
+        const where = e.location.trim() ? ` · 📍 ${e.location.trim()}` : "";
         const desc = e.description.trim() ? ` — ${e.description.trim()}` : "";
-        return `- ${emoji} ${e.name}${type ? ` [${type}]` : ""}${when ? " — " + when : ""}${price}${desc}`;
+        return `- ${emoji} ${e.name}${type ? ` [${type}]` : ""}${when ? " — " + when : ""}${price}${where}${desc}`;
       })
       .join("\n");
     return `${HEADER}
 
-Write 3 distinct weekly-lineup caption options for this week at NomadGao Rooftop, Dharamkot. Name the actual events below, give each a vivid and specific touch (not generic filler), and mention that healthy Asian bowls & Vietnamese coffee from The Hotpot House are on hand.
+Write 3 distinct weekly-lineup caption options for this week's events at NomadGao, Lower Dharamkot. Name the actual events below, give each a vivid and specific touch (not generic filler), use each event's own location, and mention that healthy Asian bowls & Vietnamese coffee from The Hotpot House are on hand.
 
 This week's events:
 ${lines}
@@ -65,7 +66,7 @@ Write 3 distinct Instagram caption options that are SPECIFICALLY about this one 
 Event: ${emoji} ${e.name}
 Type: ${type || "(general event)"}
 When: ${when}
-Where: ${e.location || "NomadGao Rooftop, Dharamkot"}
+Where: ${e.location || "The Hotpot House, NomadGao Rooftop, Lower Dharamkot"}
 Price: ${price}
 Description: ${e.description.trim() || "(none — infer the activity from the name/type and make it concrete)"}
 

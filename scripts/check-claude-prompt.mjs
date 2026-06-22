@@ -5,7 +5,7 @@ import puppeteer from "puppeteer";
 const payload = {
   week: { startDate: "2026-06-22", endDate: "2026-06-28", theme: "Matcha Studio" },
   events: [
-    { name: "Sip & Paint Sunset", typeSlug: "sip", date: "2026-06-25", time: "6:00 PM", location: "NomadGao Rooftop, Dharamkot", price: "₹600", description: "Brushes, canvas and a sundowner." },
+    { name: "Sip & Paint Sunset", typeSlug: "sip", date: "2026-06-25", time: "6:00 PM", location: "NomadGao Backyard, Lower Dharamkot", price: "₹600", description: "Brushes, canvas and a sundowner." },
   ],
 };
 
@@ -46,6 +46,7 @@ const checks = {
   "includes exact RSVP line": text.includes("📞 RSVP Bipasha · 77700 28833"),
   "no hashtag rule": /NO hashtags/i.test(text),
   "asks for 3 options": text.includes("3 options"),
+  "includes the event location": text.includes("NomadGao Backyard, Lower Dharamkot"),
 };
 let ok = true;
 for (const [k, v] of Object.entries(checks)) { console.log(`${v ? "PASS" : "FAIL"} — ${k}`); if (!v) ok = false; }
