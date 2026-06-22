@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 // Paths reachable without a session: the login flow, and /render (the headless
 // screenshot target, hit by the server's own Puppeteer with no cookie).
-const PUBLIC_PREFIXES = ["/login", "/auth", "/render"];
+const PUBLIC_PREFIXES = ["/login", "/auth", "/render", "/guide"];
 
 function isPublic(path: string): boolean {
   return PUBLIC_PREFIXES.some((p) => path === p || path.startsWith(p + "/"));
