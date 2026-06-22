@@ -28,21 +28,26 @@ interface CaptionRequest {
 // override with OPENAI_MODEL (e.g. gpt-5.5 for deeper agentic research).
 const MODEL = process.env.OPENAI_MODEL || "gpt-4.1";
 
-const SYSTEM = `You are a social-media copywriter for NomadGao × The Hotpot House in Dharamkot, Himachal Pradesh, India.
+const SYSTEM = `You are a senior social-media copywriter for NomadGao × The Hotpot House in Dharamkot, Himachal Pradesh, India.
 
-BEFORE writing, use the web_search tool to research BOTH brands thoroughly so the captions are grounded in real, current detail:
-- "NomadGao Dharamkot" — the coworking/coliving community: its vibe, the setting, who stays there, what people say about it.
-- "The Hotpot House Dharamkot" — the rooftop cafe: signature dishes/drinks, the food style, the atmosphere.
-Do at least one search for each brand. Weave in specifics you actually find (the Dhauladhar mountains, the rooftop, real menu items, the Dharamkot/Dharamshala neighbourhood, the traveller crowd). NEVER invent facts, reviews, prices, or menu items — if you're unsure, stay general rather than guess.
+STEP 1 — RESEARCH (do this first, every time): use the web_search tool to research BOTH brands thoroughly so any venue detail you use is real and current:
+- "NomadGao Dharamkot" — the coworking/coliving community: setting, vibe, who stays there.
+- "The Hotpot House Dharamkot" — the rooftop cafe: signature dishes/drinks, food style, atmosphere.
+Do at least one search per brand. NEVER invent facts, reviews, prices or menu items — if unsure, stay general.
 
-Audience: millennial & GenZ travellers, backpackers and digital nomads. Voice: warm, communal, free-spirited, a little playful. Tasteful emoji welcome.
+STEP 2 — WRITE (this is the actual goal): each caption must be SPECIFICALLY about the ONE event you are given — its activity, and what a guest will actually do, see and feel there. This is an event promo, NOT a generic venue or community ad.
+- Open with a hook about THIS event (the painting, the quiz, the open mic, the hike…). Do NOT open with generic lines like "come hang out on our rooftop" or "good company and mountain air".
+- Make the event's Description the backbone — expand the CM's words into vivid, concrete copy. If no description is given, infer the activity from the event name + type and make it specific.
+- Weave the real brand/venue research in as light supporting colour only — one rooftop / Dhauladhar / Hotpot House menu touch, never the main subject.
+- Litmus test: if a caption could be swapped onto a different event without anyone noticing, it is too generic — rewrite it so it could only belong to this event.
+
+Audience: millennial & GenZ travellers, backpackers and digital nomads. Voice: warm, vivid, a little playful; tasteful emoji.
 
 Hard rules:
 - NO hashtags anywhere. None.
 - End every caption with the RSVP line exactly: "📞 RSVP ${RSVP}".
 - Include a location line "📍 NomadGao Rooftop, Dharamkot" (or the event's location if one is given).
-- Do not invent prices, dates, or details beyond what you are given in the event data. Use the brand research only for voice, setting and food/atmosphere colour — not for fake specifics about this event.
-- Keep each caption tight: a hook, the essentials, the sign-off.
+- Use only the event facts given — never invent prices, dates or times.
 - Each variant must be meaningfully different in angle and wording — not a reword of another.
 
 OUTPUT FORMAT: Return ONLY a raw JSON object of the form {"variants": ["caption one", "caption two", ...]} containing exactly the requested number of variants. No markdown, no code fences, no commentary before or after the JSON.`;
@@ -69,19 +74,26 @@ function fallback(req: CaptionRequest): string[] {
   return eventCaption(evs[req.eventIndex ?? 0]);
 }
 
+function typeNameFor(req: CaptionRequest, idx: number): string {
+  const slug = req.payload.events[idx]?.typeSlug;
+  return req.eventTypes.find((t) => t.slug === slug)?.name ?? "";
+}
+
 function buildUserPrompt(req: CaptionRequest, count: number): string {
   const evs = toCaptionEvents(req.payload, req.eventTypes);
   if (req.kind === "calendar") {
     const lines = evs
-      .map((e) => {
+      .map((e, i) => {
         const dow = weekdayShort(e.date);
         const md = monthDay(e.date);
         const when = [dow, md, e.time].filter(Boolean).join(" · ");
         const price = e.price.trim() ? ` (${e.price.trim()})` : "";
-        return `- ${e.emoji} ${e.name}${when ? " — " + when : ""}${price}`;
+        const type = typeNameFor(req, i);
+        const desc = e.description.trim() ? ` — ${e.description.trim()}` : "";
+        return `- ${e.emoji} ${e.name}${type ? ` [${type}]` : ""}${when ? " — " + when : ""}${price}${desc}`;
       })
       .join("\n");
-    return `First research NomadGao and The Hotpot House in Dharamkot on the web, then write ${count} distinct weekly-lineup caption variants for this week at NomadGao Rooftop, Dharamkot.
+    return `Research NomadGao and The Hotpot House in Dharamkot on the web, then write ${count} distinct weekly-lineup caption variants for this week at NomadGao Rooftop, Dharamkot. Name the actual events below and give each a vivid, specific touch drawn from its description — not generic filler.
 
 Events:
 ${lines}
@@ -89,18 +101,21 @@ ${lines}
 Mention that healthy Asian bowls & Vietnamese coffee from The Hotpot House are on hand. End with the location and RSVP lines. Return exactly ${count} variants as JSON.`;
   }
 
-  const e = evs[req.eventIndex ?? 0];
+  const idx = req.eventIndex ?? 0;
+  const e = evs[idx];
   const when = [captionDate(e.date), e.time].filter(Boolean).join(" · ");
   const price = e.price.trim() || "Free";
-  return `First research NomadGao and The Hotpot House in Dharamkot on the web, then write ${count} distinct caption variants for this single event.
+  const type = typeNameFor(req, idx);
+  return `Research NomadGao and The Hotpot House in Dharamkot on the web, then write ${count} caption variants that are SPECIFICALLY about this one event (not generic venue promo).
 
-Event: ${e.emoji} ${e.name}
+Event name: ${e.emoji} ${e.name}
+Type: ${type || "(general event)"}
 When: ${when}
 Where: ${e.location || "NomadGao Rooftop, Dharamkot"}
 Price: ${price}
-Description: ${e.description || "(none given)"}
+Description (the CM's own words — make this the backbone of the caption): ${e.description || "(none given — infer the activity from the event name and type, and write something concrete and specific to it)"}
 
-Include a 🎟️ price line (omit only if free), and end with the location and RSVP lines. Return exactly ${count} variants as JSON.`;
+Open with a hook about this specific event, expand the description into vivid copy, and add just one real venue/menu touch from your research. Include a 🎟️ price line (omit only if free), and end with the location and RSVP lines. Return exactly ${count} variants as JSON.`;
 }
 
 /** Pulls a {"variants":[...]} object out of the model's text, tolerating fences. */

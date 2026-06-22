@@ -11,17 +11,18 @@ if (!process.env.OPENAI_API_KEY) {
 const MODEL = process.env.OPENAI_MODEL || "gpt-4.1";
 const RSVP = "Bipasha · 77700 28833";
 
-const SYSTEM = `You are a social-media copywriter for NomadGao × The Hotpot House in Dharamkot, India. BEFORE writing, use the web_search tool to research BOTH "NomadGao Dharamkot" and "The Hotpot House Dharamkot" thoroughly and ground the captions in real, current detail (mountains, rooftop, real menu items, the traveller crowd). Never invent prices, dates, reviews or menu items. Audience: millennial & GenZ travellers and digital nomads; voice warm, communal, playful; tasteful emoji ok. Rules: NO hashtags; end every caption with "📞 RSVP ${RSVP}"; include a "📍 NomadGao Rooftop, Dharamkot" line; don't invent event specifics beyond what's given; each variant meaningfully different. OUTPUT ONLY raw JSON: {"variants":["...","..."]} with exactly the requested count, no fences or commentary.`;
+const SYSTEM = `You are a senior social-media copywriter for NomadGao × The Hotpot House in Dharamkot, India. STEP 1 — research BOTH "NomadGao Dharamkot" and "The Hotpot House Dharamkot" with the web_search tool (real, current detail; never invent facts/prices/menu). STEP 2 — write captions that are SPECIFICALLY about the ONE event given: open with an event-specific hook (not generic "come hang out on our rooftop"), make the Description the backbone, and weave brand/venue research in only as light supporting colour. If a caption could be swapped onto a different event unnoticed, it's too generic. Audience: millennial & GenZ travellers and nomads; voice warm, vivid, playful; tasteful emoji. Rules: NO hashtags; end every caption with "📞 RSVP ${RSVP}"; include a "📍 NomadGao Rooftop, Dharamkot" line; never invent event specifics; each variant meaningfully different. OUTPUT ONLY raw JSON: {"variants":["...","..."]} with exactly the requested count, no fences or commentary.`;
 
-const input = `First research NomadGao and The Hotpot House in Dharamkot on the web, then write 3 distinct caption variants for this single event.
+const input = `Research NomadGao and The Hotpot House in Dharamkot on the web, then write 3 caption variants that are SPECIFICALLY about this one event.
 
-Event: 🎨 Sip & Paint Sunset
+Event name: 🎨 Sip & Paint Sunset
+Type: Sip & Paint
 When: Wed, Jun 25 · 6:00 PM
 Where: NomadGao Rooftop, Dharamkot
 Price: ₹600
-Description: Brushes, canvas and a sundowner.
+Description (make this the backbone): Brushes, canvas and a sundowner.
 
-Include a 🎟️ price line, and end with the location and RSVP lines. Return exactly 3 variants as JSON.`;
+Open with a hook about this specific event, expand the description, add one real venue/menu touch, include a 🎟️ price line, and end with the location and RSVP lines. Return exactly 3 variants as JSON.`;
 
 function parseVariants(text) {
   if (!text) return null;

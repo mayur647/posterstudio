@@ -16,6 +16,19 @@ import BrandMark from "@/components/BrandMark";
 
 const DEFAULT_LOCATION = "NomadGao Rooftop, Dharamkot";
 
+// 30-minute time slots for the event Time dropdown, e.g. "6:00 PM".
+const TIME_OPTIONS: string[] = (() => {
+  const out: string[] = [];
+  for (let h = 0; h < 24; h++) {
+    for (const m of [0, 30]) {
+      const period = h < 12 ? "AM" : "PM";
+      const hr12 = h % 12 === 0 ? 12 : h % 12;
+      out.push(`${hr12}:${m === 0 ? "00" : "30"} ${period}`);
+    }
+  }
+  return out;
+})();
+
 // Sentinel value for the "add a new type" option in the type dropdown.
 const ADD_TYPE = "__add__";
 
@@ -656,12 +669,22 @@ function EventCard({
           </div>
           <div>
             <label className={labelCls}>Time</label>
-            <input
+            <select
               className={inputCls}
-              placeholder="6:00 PM"
               value={event.time}
               onChange={(e) => onChange({ time: e.target.value })}
-            />
+            >
+              <option value="">Choose a time…</option>
+              {/* Preserve a previously-saved time that isn't on the 30-min grid. */}
+              {event.time && !TIME_OPTIONS.includes(event.time) && (
+                <option value={event.time}>{event.time}</option>
+              )}
+              {TIME_OPTIONS.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 
