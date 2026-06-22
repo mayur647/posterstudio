@@ -14,7 +14,12 @@ import PosterStudio from "@/components/PosterStudio";
 import ScreenNav from "@/components/ScreenNav";
 import BrandMark from "@/components/BrandMark";
 
-const DEFAULT_LOCATION = "NomadGao Rooftop, Dharamkot";
+// Venue options for the event Location dropdown; the first is the default.
+const LOCATION_OPTIONS = [
+  "The Hotpot House, NomadGao Rooftop, Lower Dharamkot",
+  "NomadGao Backyard, Lower Dharamkot",
+] as const;
+const DEFAULT_LOCATION = LOCATION_OPTIONS[0];
 
 // 30-minute time slots for the event Time dropdown, e.g. "6:00 PM".
 const TIME_OPTIONS: string[] = (() => {
@@ -690,11 +695,21 @@ function EventCard({
 
         <div>
           <label className={labelCls}>Location</label>
-          <input
+          <select
             className={inputCls}
             value={event.location}
             onChange={(e) => onChange({ location: e.target.value })}
-          />
+          >
+            {/* Preserve a previously-saved location that isn't on the list. */}
+            {event.location && !LOCATION_OPTIONS.includes(event.location as (typeof LOCATION_OPTIONS)[number]) && (
+              <option value={event.location}>{event.location}</option>
+            )}
+            {LOCATION_OPTIONS.map((loc) => (
+              <option key={loc} value={loc}>
+                {loc}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div>
