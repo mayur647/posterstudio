@@ -17,6 +17,9 @@ const FONTS_HREF =
   "&family=Big+Shoulders+Display:wght@600;700;800" +
   "&family=Darker+Grotesque:wght@600;700;800;900" +
   "&family=Schibsted+Grotesk:wght@400;500;600;700;800" +
+  "&family=Unbounded:wght@600;700;800" +
+  "&family=Fraunces:opsz,wght@9..144,500..800" +
+  "&family=Space+Grotesk:wght@500;600;700" +
   "&display=swap";
 
 export default function RootLayout({

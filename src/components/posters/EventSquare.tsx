@@ -1,4 +1,5 @@
 import { type EventPosterProps, DEFAULT_LOGOS, PHOTO_SCRIM } from "./types";
+import { PosterGrain } from "./decor";
 
 const DISPLAY = "var(--ng-display,'Bricolage Grotesque'),sans-serif";
 const MONO = "'Space Mono',monospace";
@@ -92,8 +93,10 @@ export default function EventSquare({
             display: "flex",
             alignItems: "center",
             background: "rgba(251,244,234,.95)",
+            border: "2px solid var(--ng-accent,#e08a5f)",
             borderRadius: 16,
             padding: "8px 18px",
+            transform: "rotate(-4deg)",
             boxShadow: "0 6px 18px -10px rgba(40,30,15,.4)",
           }}
         >
@@ -154,6 +157,7 @@ export default function EventSquare({
           background: "rgba(251,244,234,.8)",
           backdropFilter: "blur(7px)",
           WebkitBackdropFilter: "blur(7px)",
+          border: "1.5px solid var(--ng-accent,#e08a5f)",
           borderRadius: 18,
           padding: "22px 24px",
           boxShadow: "0 16px 36px -18px rgba(40,30,15,.5)",
@@ -228,6 +232,7 @@ export default function EventSquare({
           </span>
         </div>
       </div>
+      <PosterGrain />
     </div>
   );
 }

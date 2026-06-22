@@ -1,4 +1,5 @@
 import { type CalendarPosterProps, DEFAULT_LOGOS } from "./types";
+import { MotifLayer, PosterGrain, Sticker, STICKER_TILTS } from "./decor";
 
 const DISPLAY = "var(--ng-display,'Bricolage Grotesque'),sans-serif";
 const MONO = "'Space Mono',monospace";
@@ -28,12 +29,16 @@ export default function CalendarStory({
     >
       <div
         style={{
+          position: "relative",
+          overflow: "hidden",
           background: "var(--ng-header,#f6c3a8)",
           color: "var(--ng-header-ink,#6b4030)",
           padding: "30px 34px 28px",
           textAlign: "var(--ng-head-align,left)" as React.CSSProperties["textAlign"],
         }}
       >
+        <MotifLayer opacity={0.6} />
+        <div style={{ position: "relative", zIndex: 1 }}>
         <div
           style={{
             textAlign: "center",
@@ -126,6 +131,7 @@ export default function CalendarStory({
         >
           {dateRange}
         </div>
+        </div>
       </div>
 
       <div
@@ -153,7 +159,7 @@ export default function CalendarStory({
                 gap: 18,
               }}
             >
-              <span style={{ fontSize: 42, lineHeight: 1 }}>{t.emoji}</span>
+              <Sticker emoji={t.emoji} size={38} tilt={STICKER_TILTS[i % 4]} />
               <div style={{ flex: 1 }}>
                 <div
                   style={{
@@ -186,6 +192,7 @@ export default function CalendarStory({
                     background: "rgba(255,255,255,.55)",
                     padding: "6px 12px",
                     borderRadius: 16,
+                    boxShadow: "inset 0 0 0 1.5px var(--ng-accent,#e08a5f)",
                   }}
                 >
                   {t.price}
@@ -210,6 +217,7 @@ export default function CalendarStory({
       >
         RSVP BIPASHA · 77700 28833
       </div>
+      <PosterGrain />
     </div>
   );
 }

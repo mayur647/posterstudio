@@ -1,4 +1,5 @@
 import { type CalendarPosterProps, DEFAULT_LOGOS } from "./types";
+import { MotifLayer, PosterGrain, Sticker, STICKER_TILTS } from "./decor";
 
 const DISPLAY = "var(--ng-display,'Bricolage Grotesque'),sans-serif";
 const MONO = "'Space Mono',monospace";
@@ -28,12 +29,16 @@ export default function CalendarSquare({
     >
       <div
         style={{
+          position: "relative",
+          overflow: "hidden",
           background: "var(--ng-header,#f6c3a8)",
           color: "var(--ng-header-ink,#6b4030)",
           padding: "22px 30px 24px",
           textAlign: "var(--ng-head-align,left)" as React.CSSProperties["textAlign"],
         }}
       >
+        <MotifLayer opacity={0.6} />
+        <div style={{ position: "relative", zIndex: 1 }}>
         <div
           style={{
             textAlign: "center",
@@ -126,6 +131,7 @@ export default function CalendarSquare({
         >
           {dateRange}
         </div>
+        </div>
       </div>
 
       <div
@@ -159,7 +165,7 @@ export default function CalendarSquare({
                   justifyContent: "space-between",
                 }}
               >
-                <span style={{ fontSize: 30, lineHeight: 1 }}>{t.emoji}</span>
+                <Sticker emoji={t.emoji} size={28} tilt={STICKER_TILTS[i % 4]} />
                 <span
                   style={{
                     fontFamily: MONO,
@@ -167,6 +173,7 @@ export default function CalendarSquare({
                     background: "rgba(255,255,255,.6)",
                     padding: "5px 12px",
                     borderRadius: 18,
+                    boxShadow: "inset 0 0 0 1.5px var(--ng-accent,#e08a5f)",
                   }}
                 >
                   {[t.weekday, t.monthDay].filter(Boolean).join(" · ")}
@@ -213,6 +220,7 @@ export default function CalendarSquare({
       >
         RSVP BIPASHA · 77700 28833
       </div>
+      <PosterGrain />
     </div>
   );
 }

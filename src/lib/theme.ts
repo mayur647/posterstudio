@@ -1,9 +1,12 @@
 /**
- * NomadGao theme system — the 7 curated palettes, font pairings, corner radii,
- * and the default event types. Values are lifted verbatim from the design
- * handoff (README "Design Tokens" + the prototype's palette array).
+ * NomadGao theme system — green-anchored palettes, font pairings, corner radii,
+ * and the default event types.
  *
- * Matcha Studio is the default theme; "Shuffle" rerolls among all palettes.
+ * Brand rule: every palette is led by a Matcha-green header so the whole set
+ * reads as one identity, while the accent + tile mix rotates so no two looks
+ * feel the same. "Shuffle" rerolls palette, fonts, radius, motif and layout —
+ * the green thread stays constant. Tuned for a millennial / GenZ / digital-nomad
+ * audience: warm, playful, a little editorial, never corporate.
  */
 
 export type PaletteColor = readonly [bg: string, ink: string];
@@ -11,8 +14,10 @@ export type PaletteColor = readonly [bg: string, ink: string];
 export interface Palette {
   /** Display name, also the "Palette · {name}" indicator label. */
   name: string;
-  /** Header band [background, ink]. */
+  /** Header band [background, ink] — always a Matcha-green (the brand anchor). */
   header: PaletteColor;
+  /** Playful accent used for stickers, motifs and decorative rings. */
+  accent: string;
   /** The four calendar tiles, each [background, ink]. */
   tiles: readonly [PaletteColor, PaletteColor, PaletteColor, PaletteColor];
 }
@@ -21,6 +26,7 @@ export const PALETTES: readonly Palette[] = [
   {
     name: "Matcha Studio",
     header: ["#cdd9a5", "#36431f"],
+    accent: "#e08a5f",
     tiles: [
       ["#efe7d2", "#5b5230"],
       ["#e7b59a", "#6e4430"],
@@ -29,74 +35,88 @@ export const PALETTES: readonly Palette[] = [
     ],
   },
   {
-    name: "Sunset Clay",
-    header: ["#f6c3a8", "#6b4030"],
+    name: "Matcha + Mango",
+    header: ["#c6d79f", "#39491f"],
+    accent: "#eaa13f",
     tiles: [
       ["#bcd3bf", "#3e4f40"],
-      ["#f5de9c", "#6a5526"],
-      ["#f3c4b1", "#6e4434"],
-      ["#b4d6cf", "#325852"],
+      ["#f5cf8a", "#6a5320"],
+      ["#f4c3a4", "#6e4632"],
+      ["#e9dcc0", "#5d5330"],
     ],
   },
   {
-    name: "Olive Grove",
+    name: "Sage & Clay",
     header: ["#bcd3bf", "#3e4f40"],
+    accent: "#d8795a",
     tiles: [
-      ["#f6c3a8", "#6b4030"],
-      ["#f5de9c", "#6a5526"],
-      ["#b4d6cf", "#325852"],
-      ["#eab69b", "#6e4230"],
-    ],
-  },
-  {
-    name: "Golden Hour",
-    header: ["#f5de9c", "#6a5526"],
-    tiles: [
-      ["#bcd3bf", "#3e4f40"],
+      ["#cdd9a5", "#414c24"],
       ["#f3c4b1", "#6e4434"],
+      ["#ead9b6", "#6a5a32"],
       ["#b4d6cf", "#325852"],
-      ["#f6c3a8", "#6b4030"],
     ],
   },
   {
-    name: "Coastal Pine",
-    header: ["#b4d6cf", "#325852"],
+    name: "Matcha & Berry",
+    header: ["#c8d7a3", "#384720"],
+    accent: "#a86cae",
     tiles: [
-      ["#f6c3a8", "#6b4030"],
-      ["#f5de9c", "#6a5526"],
       ["#bcd3bf", "#3e4f40"],
+      ["#d9b8de", "#4e3a57"],
       ["#f3c4b1", "#6e4434"],
+      ["#ecd98f", "#665119"],
     ],
   },
   {
-    name: "Rosewood",
-    header: ["#f3c4b1", "#6e4434"],
+    name: "Forest & Peach",
+    header: ["#aecb9c", "#36461f"],
+    accent: "#e8956d",
+    tiles: [
+      ["#cfe0b4", "#3d4a23"],
+      ["#f6c3a8", "#6b4030"],
+      ["#b8cccf", "#33545a"],
+      ["#efe7d2", "#5b5230"],
+    ],
+  },
+  {
+    name: "Matcha & Coast",
+    header: ["#c5d6a6", "#39481f"],
+    accent: "#3f8e87",
     tiles: [
       ["#bcd3bf", "#3e4f40"],
+      ["#b4d6cf", "#325852"],
       ["#f5de9c", "#6a5526"],
-      ["#b4d6cf", "#325852"],
-      ["#cdc1e0", "#463a5e"],
+      ["#e7b59a", "#6e4430"],
     ],
   },
   {
-    name: "Sandstone",
-    header: ["#ead9b6", "#6a5a32"],
+    name: "Olive & Honey",
+    header: ["#c9d3a0", "#414a22"],
+    accent: "#d99b2e",
     tiles: [
       ["#bcd3bf", "#3e4f40"],
+      ["#ecd98f", "#665119"],
+      ["#ead9b6", "#6a5a32"],
       ["#eab69b", "#6e4230"],
-      ["#b4d6cf", "#325852"],
-      ["#cdc1e0", "#463a5e"],
     ],
   },
 ] as const;
 
 export const DEFAULT_PALETTE = "Matcha Studio";
 
-/** Display + body font pairings the Shuffle rerolls between. */
+/**
+ * Display + body font pairings the Shuffle rerolls between. Bodies stay clean
+ * grotesks for legibility; displays range from refined (Bricolage, Schibsted)
+ * to loud-and-fun (Unbounded, Big Shoulders) to editorial (Fraunces) so the
+ * set never feels monotonous. Every family is loaded in the root layout.
+ */
 export const FONT_PAIRS: readonly (readonly [display: string, body: string])[] =
   [
     ["'Bricolage Grotesque'", "'Hanken Grotesk'"],
+    ["'Unbounded'", "'Hanken Grotesk'"],
+    ["'Fraunces'", "'Hanken Grotesk'"],
     ["'Big Shoulders Display'", "'Hanken Grotesk'"],
+    ["'Space Grotesk'", "'Hanken Grotesk'"],
     ["'Darker Grotesque'", "'Schibsted Grotesk'"],
     ["'Schibsted Grotesk'", "'Hanken Grotesk'"],
   ] as const;
