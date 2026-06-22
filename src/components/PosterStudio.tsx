@@ -52,6 +52,11 @@ export default function PosterStudio({
   // AI-generated caption variants appended per subject (beyond the templates).
   const [extra, setExtra] = useState<Record<string, string[]>>({});
   const [capBusy, setCapBusy] = useState<string | null>(null);
+  // Per-subject provenance of the last caption fetch (openai vs template + why),
+  // so the CM can see whether a live AI caption was actually produced.
+  const [capMeta, setCapMeta] = useState<
+    Record<string, { source?: string; reason?: string; sources?: string[] }>
+  >({});
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [styleReady, setStyleReady] = useState(false);
@@ -165,6 +170,10 @@ export default function PosterStudio({
       });
       if (!res.ok) throw new Error("caption request failed");
       const data = await res.json();
+      setCapMeta((m) => ({
+        ...m,
+        [key]: { source: data?.source, reason: data?.reason, sources: data?.sources },
+      }));
       const fresh: unknown = data?.variants;
       if (Array.isArray(fresh) && fresh.every((v) => typeof v === "string") && fresh.length > 0) {
         // Advance to the first fetched variant that differs from what's shown
@@ -331,6 +340,7 @@ export default function PosterStudio({
             loading={capBusy === "calendar"}
             onCopy={() => copy("calendar", captionText("calendar", calBase))}
             onRefresh={() => refresh("calendar", calBase, { kind: "calendar" })}
+            meta={capMeta["calendar"]}
           />
         </Section>
 
@@ -384,6 +394,7 @@ export default function PosterStudio({
                     eventIndex: i,
                   })
                 }
+                meta={capMeta[key]}
               />
             </Section>
           );
@@ -467,6 +478,7 @@ function CaptionCard({
   loading,
   onCopy,
   onRefresh,
+  meta,
 }: {
   label: string;
   text: string;
@@ -474,6 +486,7 @@ function CaptionCard({
   loading?: boolean;
   onCopy: () => void;
   onRefresh: () => void;
+  meta?: { source?: string; reason?: string; sources?: string[] };
 }) {
   return (
     <div className="w-full max-w-[430px] rounded-[20px] border border-ng-border bg-white p-6 shadow-[0_24px_56px_-34px_rgba(60,40,20,0.4)] lg:w-[430px]">
@@ -499,6 +512,17 @@ function CaptionCard({
           </button>
         </div>
       </div>
+      {meta?.source && (
+        <div className="mb-2.5 font-mono text-[10px] leading-[1.5] tracking-[0.04em] text-ng-mono-muted">
+          {meta.source === "claude" || meta.source === "openai"
+            ? `✨ Researched & written by ${meta.source === "claude" ? "Claude" : "OpenAI"}${
+                meta.sources?.length
+                  ? ` · ${meta.sources.length} source${meta.sources.length === 1 ? "" : "s"}`
+                  : ""
+              }`
+            : `📝 Built-in template${meta.reason ? ` — AI off: ${meta.reason}` : ""}`}
+        </div>
+      )}
       <div className="whitespace-pre-line rounded-[14px] border border-[#f0e3d0] bg-ng-card px-5 py-[18px] font-body text-[14px] leading-[1.6] text-ng-ink-3">
         {text}
       </div>

@@ -1,7 +1,7 @@
 # Deploying the NomadGao poster app
 
 The app is a Next.js (App Router) project in this folder, backed by Supabase
-(Postgres + Storage) and the OpenAI API (captions, with live web search). It's already wired and
+(Postgres + Storage) and the Anthropic Claude API (captions, with live web search). It's already wired and
 runs locally; these are the steps **only you** can do (they need your accounts).
 
 This repo was initialised with one commit. The Supabase project is already set
@@ -40,8 +40,8 @@ documents the variables.)
    |---|---|
    | `SUPABASE_URL` | `https://atrhuofopirqrqklyqkx.supabase.co` |
    | `SUPABASE_SERVICE_ROLE_KEY` | your `service_role` secret (server-only) |
-   | `OPENAI_API_KEY` | your OpenAI key (optional — templates if absent) |
-   | `OPENAI_MODEL` | optional; default `gpt-4.1` (must support `web_search`) |
+   | `ANTHROPIC_API_KEY` | your Anthropic key (optional — templates if absent) |
+   | `ANTHROPIC_MODEL` | optional; default `claude-opus-4-8` (`claude-haiku-4-5` for cheaper/faster) |
 
    Set them for **Production** (and Preview if you want preview deploys to work).
 4. **Deploy.**
@@ -73,11 +73,11 @@ documents the variables.)
    photos; the week is saved to the `week`/`event` tables.
 4. **Download PNG** on a poster — this exercises the serverless Chromium path.
    Confirm you get a 1080×1080 / 1080×1920 image.
-5. **Refresh** a caption — with `OPENAI_API_KEY` set, this runs a live web
+5. **Refresh** a caption — with `ANTHROPIC_API_KEY` set, Claude runs a live web
    search on NomadGao + The Hotpot House and writes the caption from it
    (takes ~10–30s; otherwise on-brand templates). Note `/api/caption` sets
-   `maxDuration = 60` — on Hobby, very deep research models can approach that
-   cap; `gpt-4.1` (default) stays well under it.
+   `maxDuration = 60` — on Hobby, `claude-opus-4-8` can approach that cap; set
+   `ANTHROPIC_MODEL=claude-haiku-4-5` if refreshes time out or feel slow.
 
 ---
 

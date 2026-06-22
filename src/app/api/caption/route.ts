@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import OpenAI from "openai";
+import Anthropic from "@anthropic-ai/sdk";
 import type { EventType } from "@/lib/theme";
 import type { WeekFormPayload } from "@/lib/types";
 import { emojiFor } from "@/lib/posterData";
@@ -13,7 +13,8 @@ import {
 
 export const runtime = "nodejs";
 // Live web research + writing can take a while; give it the most a serverless
-// function gets on Vercel Hobby. gpt-4.1 (the default) stays well under this.
+// function gets on Vercel Hobby. claude-haiku-4-5 stays well under this; the
+// default claude-opus-4-8 is higher quality but slower/pricier.
 export const maxDuration = 60;
 
 interface CaptionRequest {
@@ -24,9 +25,10 @@ interface CaptionRequest {
   count?: number;
 }
 
-// Model must support the hosted web_search tool. gpt-4.1 is fast + reliable;
-// override with OPENAI_MODEL (e.g. gpt-5.5 for deeper agentic research).
-const MODEL = process.env.OPENAI_MODEL || "gpt-4.1";
+// Any Claude 4 model supports the hosted web_search tool. Default to the most
+// capable; override with ANTHROPIC_MODEL (e.g. claude-haiku-4-5 for faster,
+// cheaper captions, or claude-sonnet-4-6 for a middle ground).
+const MODEL = process.env.ANTHROPIC_MODEL || "claude-opus-4-8";
 
 const SYSTEM = `You are a senior social-media copywriter for NomadGao × The Hotpot House in Dharamkot, Himachal Pradesh, India.
 
@@ -139,26 +141,31 @@ function parseVariants(text: string): string[] | null {
   return null;
 }
 
-/** Best-effort list of source URLs the model cited, for transparency. */
-function extractSources(response: { output?: unknown }): string[] {
+/** Best-effort list of source URLs Claude searched/cited, for transparency. */
+function extractSources(message: Anthropic.Message): string[] {
   const urls = new Set<string>();
   try {
-    const output = Array.isArray(response.output) ? response.output : [];
-    for (const item of output as Array<Record<string, unknown>>) {
-      const content = Array.isArray(item.content)
-        ? (item.content as Array<Record<string, unknown>>)
-        : [];
-      for (const block of content) {
-        const annotations = Array.isArray(block.annotations)
-          ? (block.annotations as Array<Record<string, unknown>>)
-          : [];
-        for (const a of annotations) {
-          if (a.type === "url_citation" && typeof a.url === "string") urls.add(a.url);
+    for (const block of message.content) {
+      const b = block as unknown as {
+        type: string;
+        content?: unknown;
+        citations?: unknown;
+      };
+      // web_search_tool_result block holds the result list.
+      if (b.type === "web_search_tool_result" && Array.isArray(b.content)) {
+        for (const r of b.content as Array<Record<string, unknown>>) {
+          if (typeof r.url === "string") urls.add(r.url);
+        }
+      }
+      // text blocks carry url_citation annotations.
+      if (b.type === "text" && Array.isArray(b.citations)) {
+        for (const c of b.citations as Array<Record<string, unknown>>) {
+          if (typeof c.url === "string") urls.add(c.url);
         }
       }
     }
   } catch {
-    /* annotations are best-effort */
+    /* citations are best-effort */
   }
   return [...urls].slice(0, 8);
 }
@@ -176,32 +183,52 @@ export async function POST(req: Request) {
 
   const count = Math.min(Math.max(body.count ?? 3, 1), 5);
 
-  // No key → template fallback so the app works without OpenAI configured.
-  if (!process.env.OPENAI_API_KEY) {
-    return NextResponse.json({ variants: fallback(body), source: "template" });
+  // No key → template fallback so the app works without Claude configured.
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return NextResponse.json({
+      variants: fallback(body),
+      source: "template",
+      reason: "ANTHROPIC_API_KEY is not set on the server",
+    });
   }
 
   try {
-    const client = new OpenAI();
-    const response = await client.responses.create({
+    const client = new Anthropic();
+    const messages: Anthropic.MessageParam[] = [
+      { role: "user", content: buildUserPrompt(body, count) },
+    ];
+    const params: Anthropic.MessageCreateParamsNonStreaming = {
       model: MODEL,
-      tools: [{ type: "web_search" }],
-      // Encourage the model to actually use the tool before answering.
-      tool_choice: "auto",
-      instructions: SYSTEM,
-      input: buildUserPrompt(body, count),
-      max_output_tokens: 2000,
-    });
+      max_tokens: 2048,
+      system: SYSTEM,
+      tools: [{ type: "web_search_20260209", name: "web_search", max_uses: 5 }],
+      messages,
+    };
 
-    const variants = parseVariants(response.output_text ?? "");
-    if (!variants) throw new Error("unexpected caption shape");
+    let resp = await client.messages.create(params);
+    // The server runs its own tool loop; if it pauses, re-send to continue.
+    let guard = 0;
+    while (resp.stop_reason === "pause_turn" && guard < 4) {
+      messages.push({ role: "assistant", content: resp.content });
+      resp = await client.messages.create({ ...params, messages });
+      guard++;
+    }
+
+    const text = resp.content
+      .filter((b): b is Anthropic.TextBlock => b.type === "text")
+      .map((b) => b.text)
+      .join("\n");
+    const variants = parseVariants(text);
+    if (!variants) throw new Error("model returned no parseable variants");
+
     return NextResponse.json({
       variants,
-      source: "openai",
-      sources: extractSources(response),
+      source: "claude",
+      sources: extractSources(resp),
     });
   } catch (err) {
-    console.error("caption generation failed; using template", err);
-    return NextResponse.json({ variants: fallback(body), source: "template" });
+    const reason = err instanceof Error ? err.message : "Claude request failed";
+    console.error("caption generation failed; using template:", reason);
+    return NextResponse.json({ variants: fallback(body), source: "template", reason });
   }
 }
