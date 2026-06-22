@@ -1,5 +1,6 @@
 import LoginButton from "./LoginButton";
 import BrandMark from "@/components/BrandMark";
+import { GUIDE_URL } from "@/lib/links";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +32,15 @@ export default async function LoginPage({
         )}
 
         <LoginButton />
+
+        <a
+          href={GUIDE_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-5 block text-center font-body text-[13.5px] font-semibold text-ng-mono-muted hover:text-ng-ink"
+        >
+          ❔ How to use this tool
+        </a>
       </div>
     </div>
   );
