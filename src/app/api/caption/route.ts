@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import Anthropic from "@anthropic-ai/sdk";
+import OpenAI from "openai";
 import type { EventType } from "@/lib/theme";
 import type { WeekFormPayload } from "@/lib/types";
 import { emojiFor } from "@/lib/posterData";
@@ -12,7 +12,9 @@ import {
 } from "@/lib/captions";
 
 export const runtime = "nodejs";
-export const maxDuration = 30;
+// Live web research + writing can take a while; give it the most a serverless
+// function gets on Vercel Hobby. gpt-4.1 (the default) stays well under this.
+export const maxDuration = 60;
 
 interface CaptionRequest {
   kind: "calendar" | "event";
@@ -22,55 +24,28 @@ interface CaptionRequest {
   count?: number;
 }
 
-const MODEL = "claude-opus-4-8";
+// Model must support the hosted web_search tool. gpt-4.1 is fast + reliable;
+// override with OPENAI_MODEL (e.g. gpt-5.5 for deeper agentic research).
+const MODEL = process.env.OPENAI_MODEL || "gpt-4.1";
 
-const SYSTEM = `You write Instagram captions for NomadGao × The Hotpot House — a Himalayan coworking/coliving community with a healthy rooftop Asian cafe, in Dharamkot.
+const SYSTEM = `You are a social-media copywriter for NomadGao × The Hotpot House in Dharamkot, Himachal Pradesh, India.
 
-Voice: warm, communal, free-spirited nomad/foodie. Lean on the cues that make this place specific — the Dhauladhar mountains, the rooftop, golden-hour light, good company, and healthy Asian food from The Hotpot House (bowls, Vietnamese coffee). Light, tasteful emoji are welcome.
+BEFORE writing, use the web_search tool to research BOTH brands thoroughly so the captions are grounded in real, current detail:
+- "NomadGao Dharamkot" — the coworking/coliving community: its vibe, the setting, who stays there, what people say about it.
+- "The Hotpot House Dharamkot" — the rooftop cafe: signature dishes/drinks, the food style, the atmosphere.
+Do at least one search for each brand. Weave in specifics you actually find (the Dhauladhar mountains, the rooftop, real menu items, the Dharamkot/Dharamshala neighbourhood, the traveller crowd). NEVER invent facts, reviews, prices, or menu items — if you're unsure, stay general rather than guess.
+
+Audience: millennial & GenZ travellers, backpackers and digital nomads. Voice: warm, communal, free-spirited, a little playful. Tasteful emoji welcome.
 
 Hard rules:
 - NO hashtags anywhere. None.
-- Always end with the RSVP line exactly: "📞 RSVP ${RSVP}".
-- Always include a location line "📍 NomadGao Rooftop, Dharamkot" (or the event's location if given).
-- Keep each caption tight — a hook, the essentials, and the sign-off. No invented prices, dates, or details beyond what you're given.
-- Each variant must be meaningfully different in angle and wording, not a reword.
+- End every caption with the RSVP line exactly: "📞 RSVP ${RSVP}".
+- Include a location line "📍 NomadGao Rooftop, Dharamkot" (or the event's location if one is given).
+- Do not invent prices, dates, or details beyond what you are given in the event data. Use the brand research only for voice, setting and food/atmosphere colour — not for fake specifics about this event.
+- Keep each caption tight: a hook, the essentials, the sign-off.
+- Each variant must be meaningfully different in angle and wording — not a reword of another.
 
-Example weekly-lineup caption:
-"🗓 This week at NomadGao · Dharamkot
-
-Four nights, one big table — here's what's on the rooftop this week:
-
-🎲 Mon · Board Game Night — 7:00 PM
-🎨 Wed · Sip & Paint Sunset — 6:00 PM
-
-Good company, mountain air, and healthy Asian bowls & Vietnamese coffee from The Hotpot House. Come as you are. 🌄
-
-📍 NomadGao Rooftop, Dharamkot
-📞 RSVP ${RSVP}"
-
-Example event caption:
-"🎨 Sip & Paint Sunset · Wed, Jun 25 · 6 PM
-
-Swap the laptop for a paintbrush. Sip something cold, watch the Dhauladhars turn gold, and let the canvas do the talking — no skills needed, just good company on the NomadGao rooftop. 🌄
-
-Fresh Asian bowls & Vietnamese coffee from The Hotpot House on hand all evening. 🍜☕
-
-📍 NomadGao Rooftop, Dharamkot
-🎟️ ₹600 · limited spots
-📞 RSVP ${RSVP}"`;
-
-const SCHEMA = {
-  type: "object",
-  properties: {
-    variants: {
-      type: "array",
-      items: { type: "string" },
-      description: "The caption variants, each a complete caption string.",
-    },
-  },
-  required: ["variants"],
-  additionalProperties: false,
-} as const;
+OUTPUT FORMAT: Return ONLY a raw JSON object of the form {"variants": ["caption one", "caption two", ...]} containing exactly the requested number of variants. No markdown, no code fences, no commentary before or after the JSON.`;
 
 function toCaptionEvents(
   payload: WeekFormPayload,
@@ -87,7 +62,7 @@ function toCaptionEvents(
   }));
 }
 
-/** Template variants used when no API key is configured or Claude errors. */
+/** Template variants used when no API key is configured or the model errors. */
 function fallback(req: CaptionRequest): string[] {
   const evs = toCaptionEvents(req.payload, req.eventTypes);
   if (req.kind === "calendar") return calendarCaption(evs);
@@ -106,18 +81,18 @@ function buildUserPrompt(req: CaptionRequest, count: number): string {
         return `- ${e.emoji} ${e.name}${when ? " — " + when : ""}${price}`;
       })
       .join("\n");
-    return `Write ${count} distinct weekly-lineup caption variants for this week at NomadGao Rooftop, Dharamkot.
+    return `First research NomadGao and The Hotpot House in Dharamkot on the web, then write ${count} distinct weekly-lineup caption variants for this week at NomadGao Rooftop, Dharamkot.
 
 Events:
 ${lines}
 
-Mention that healthy Asian bowls & Vietnamese coffee from The Hotpot House are on hand. End with the location and RSVP lines.`;
+Mention that healthy Asian bowls & Vietnamese coffee from The Hotpot House are on hand. End with the location and RSVP lines. Return exactly ${count} variants as JSON.`;
   }
 
   const e = evs[req.eventIndex ?? 0];
   const when = [captionDate(e.date), e.time].filter(Boolean).join(" · ");
   const price = e.price.trim() || "Free";
-  return `Write ${count} distinct caption variants for this single event.
+  return `First research NomadGao and The Hotpot House in Dharamkot on the web, then write ${count} distinct caption variants for this single event.
 
 Event: ${e.emoji} ${e.name}
 When: ${when}
@@ -125,7 +100,52 @@ Where: ${e.location || "NomadGao Rooftop, Dharamkot"}
 Price: ${price}
 Description: ${e.description || "(none given)"}
 
-Include a 🎟️ price line (omit only if free), and end with the location and RSVP lines.`;
+Include a 🎟️ price line (omit only if free), and end with the location and RSVP lines. Return exactly ${count} variants as JSON.`;
+}
+
+/** Pulls a {"variants":[...]} object out of the model's text, tolerating fences. */
+function parseVariants(text: string): string[] | null {
+  if (!text) return null;
+  const cleaned = text.replace(/```json\s*/gi, "").replace(/```/g, "").trim();
+  const candidates = [cleaned];
+  const match = cleaned.match(/\{[\s\S]*\}/);
+  if (match) candidates.push(match[0]);
+  for (const c of candidates) {
+    try {
+      const obj = JSON.parse(c);
+      const v: unknown = obj?.variants;
+      if (Array.isArray(v) && v.length > 0 && v.every((s) => typeof s === "string")) {
+        return v as string[];
+      }
+    } catch {
+      /* try next candidate */
+    }
+  }
+  return null;
+}
+
+/** Best-effort list of source URLs the model cited, for transparency. */
+function extractSources(response: { output?: unknown }): string[] {
+  const urls = new Set<string>();
+  try {
+    const output = Array.isArray(response.output) ? response.output : [];
+    for (const item of output as Array<Record<string, unknown>>) {
+      const content = Array.isArray(item.content)
+        ? (item.content as Array<Record<string, unknown>>)
+        : [];
+      for (const block of content) {
+        const annotations = Array.isArray(block.annotations)
+          ? (block.annotations as Array<Record<string, unknown>>)
+          : [];
+        for (const a of annotations) {
+          if (a.type === "url_citation" && typeof a.url === "string") urls.add(a.url);
+        }
+      }
+    }
+  } catch {
+    /* annotations are best-effort */
+  }
+  return [...urls].slice(0, 8);
 }
 
 export async function POST(req: Request) {
@@ -141,32 +161,30 @@ export async function POST(req: Request) {
 
   const count = Math.min(Math.max(body.count ?? 3, 1), 5);
 
-  // No key → template fallback so the app works without Claude configured.
-  if (!process.env.ANTHROPIC_API_KEY) {
+  // No key → template fallback so the app works without OpenAI configured.
+  if (!process.env.OPENAI_API_KEY) {
     return NextResponse.json({ variants: fallback(body), source: "template" });
   }
 
   try {
-    const client = new Anthropic();
-    const response = await client.messages.create({
+    const client = new OpenAI();
+    const response = await client.responses.create({
       model: MODEL,
-      max_tokens: 2000,
-      system: SYSTEM,
-      messages: [{ role: "user", content: buildUserPrompt(body, count) }],
-      output_config: { format: { type: "json_schema", schema: SCHEMA } },
+      tools: [{ type: "web_search" }],
+      // Encourage the model to actually use the tool before answering.
+      tool_choice: "auto",
+      instructions: SYSTEM,
+      input: buildUserPrompt(body, count),
+      max_output_tokens: 2000,
     });
 
-    const text = response.content.find((b) => b.type === "text");
-    const parsed = text ? JSON.parse(text.text) : null;
-    const variants: unknown = parsed?.variants;
-    if (
-      !Array.isArray(variants) ||
-      variants.some((v) => typeof v !== "string") ||
-      variants.length === 0
-    ) {
-      throw new Error("unexpected caption shape");
-    }
-    return NextResponse.json({ variants, source: "claude" });
+    const variants = parseVariants(response.output_text ?? "");
+    if (!variants) throw new Error("unexpected caption shape");
+    return NextResponse.json({
+      variants,
+      source: "openai",
+      sources: extractSources(response),
+    });
   } catch (err) {
     console.error("caption generation failed; using template", err);
     return NextResponse.json({ variants: fallback(body), source: "template" });
