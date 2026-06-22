@@ -5,6 +5,7 @@ import {
   buildCalendarTiles,
   buildEventProps,
   calendarRange,
+  weekPlace,
 } from "@/lib/posterData";
 import CalendarSquare from "@/components/posters/CalendarSquare";
 import CalendarStory from "@/components/posters/CalendarStory";
@@ -33,11 +34,12 @@ export default async function RenderPage({
   if (spec.kind === "calendar") {
     const tiles = buildCalendarTiles(spec.payload, spec.eventTypes);
     const range = calendarRange(spec.payload);
+    const place = weekPlace(spec.payload);
     node =
       spec.format === "square" ? (
-        <CalendarSquare id="poster" title={CAL_TITLE} dateRange={range} tiles={tiles} logos={logos} />
+        <CalendarSquare id="poster" title={CAL_TITLE} dateRange={range} tiles={tiles} place={place} logos={logos} />
       ) : (
-        <CalendarStory id="poster" title={CAL_TITLE} dateRange={range} tiles={tiles} logos={logos} />
+        <CalendarStory id="poster" title={CAL_TITLE} dateRange={range} tiles={tiles} place={place} logos={logos} />
       );
   } else {
     const ev = buildEventProps(

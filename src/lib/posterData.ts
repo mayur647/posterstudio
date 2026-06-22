@@ -35,10 +35,16 @@ export function tilePrice(price: string): string {
   return /free/i.test(p) ? "FREE" : p;
 }
 
-/** Short value for the event poster's WHERE cell. */
-export function shortWhere(location: string): string {
-  if (/rooftop/i.test(location)) return "Rooftop";
-  return location.split(",")[0].trim() || "—";
+/**
+ * Place label for the weekly-calendar poster. Events can be at different venues
+ * across a week, so show the shared neighbourhood (the trailing comma segment)
+ * when it's common, falling back to "Dharamkot".
+ */
+export function weekPlace(payload: WeekFormPayload): string {
+  const locs = payload.events.map((e) => e.location.trim()).filter(Boolean);
+  if (locs.length === 0) return "Dharamkot";
+  const tails = locs.map((l) => l.split(",").pop()!.trim());
+  return tails.every((t) => t && t === tails[0]) ? tails[0] : "Dharamkot";
 }
 
 export function emojiFor(eventTypes: EventType[], slug: string): string {
@@ -78,7 +84,7 @@ export function buildEventProps(
     title: event.name,
     description: event.description,
     time: event.time || "—",
-    where: shortWhere(event.location),
+    where: event.location.trim() || "NomadGao Rooftop, Lower Dharamkot",
     price: event.price.trim() || "Free",
     bgUrl,
   };

@@ -24,6 +24,8 @@ export interface CalendarPosterProps {
   /** "JUN 22 – 28" */
   dateRange: string;
   tiles: CalendarTile[];
+  /** Neighbourhood/place label shown in the header (e.g. "Lower Dharamkot"). */
+  place?: string;
   /** Brand logo URLs; defaults to the bundled assets. */
   logos?: Logos;
 }

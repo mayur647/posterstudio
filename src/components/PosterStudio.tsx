@@ -16,6 +16,7 @@ import {
   buildEventProps,
   calendarRange,
   emojiFor,
+  weekPlace,
 } from "@/lib/posterData";
 import ScreenNav from "@/components/ScreenNav";
 import ScaledPoster from "@/components/ScaledPoster";
@@ -81,6 +82,7 @@ export default function PosterStudio({
   const emoji = (slug: string) => emojiFor(eventTypes, slug);
   const tiles = buildCalendarTiles(payload, eventTypes);
   const range = calendarRange(payload);
+  const place = weekPlace(payload);
   const calPrompt = buildClaudePrompt("calendar", payload, eventTypes);
 
   function shuffle() {
@@ -193,6 +195,7 @@ export default function PosterStudio({
                 title={CAL_TITLE}
                 dateRange={range}
                 tiles={tiles}
+                place={place}
                 logos={logos}
               />
             </ScaledPoster>
@@ -213,6 +216,7 @@ export default function PosterStudio({
                 title={CAL_TITLE}
                 dateRange={range}
                 tiles={tiles}
+                place={place}
                 logos={logos}
               />
             </ScaledPoster>

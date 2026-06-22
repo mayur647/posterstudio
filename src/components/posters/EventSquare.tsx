@@ -190,14 +190,36 @@ export default function EventSquare({
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(3,1fr)",
+            gridTemplateColumns: "repeat(2,1fr)",
             gap: 16,
             marginTop: 18,
           }}
         >
           <MetaCell label="TIME" value={time} />
-          <MetaCell label="WHERE" value={where} />
           <MetaCell label="PRICE" value={price} />
+          <div style={{ gridColumn: "1 / -1" }}>
+            <div
+              style={{
+                fontFamily: MONO,
+                fontSize: 12,
+                letterSpacing: ".13em",
+                color: "#a3917a",
+              }}
+            >
+              WHERE
+            </div>
+            <div
+              style={{
+                marginTop: 2,
+                fontWeight: 700,
+                fontSize: 15.5,
+                lineHeight: 1.25,
+                color: "#4a3f36",
+              }}
+            >
+              📍 {where}
+            </div>
+          </div>
         </div>
         <div
           style={{

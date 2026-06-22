@@ -10,6 +10,7 @@ export default function CalendarStory({
   title,
   dateRange,
   tiles,
+  place = "Dharamkot",
   logos = DEFAULT_LOGOS,
 }: CalendarPosterProps & { id?: string }) {
   return (
@@ -106,7 +107,7 @@ export default function CalendarStory({
               opacity: 0.92,
             }}
           >
-            Dharamkot
+            {place}
           </div>
         </div>
         <h1
